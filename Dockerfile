@@ -59,7 +59,9 @@ RUN rosdep init \
 ENV ROS_DISTRO kinetic
 RUN apt-get update && apt-get install -y \
 #    ros-kinetic-ros-core=1.3.1-0* \
-    ros-kinetic-desktop-full \
+	ros-kinetic-desktop-full \
+	ros-kinetic-moveit\
+	python-catkin-tools\
     #              A
     #              +--- full desktop \
     && rm -rf /var/lib/apt/lists/*
