@@ -1,14 +1,10 @@
-FROM ubuntu:16.04
+# FROM ubuntu:18.04
+FROM osrf/ros2:nightly
 
 ENV DEBIAN_FRONTEND noninteractive
 
 # built-in packages
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends software-properties-common curl \
-    && sh -c "echo 'deb http://download.opensuse.org/repositories/home:/Horst3180/xUbuntu_16.04/ /' >> /etc/apt/sources.list.d/arc-theme.list" \
-    && curl -SL http://download.opensuse.org/repositories/home:Horst3180/xUbuntu_16.04/Release.key | apt-key add - \
-    && add-apt-repository ppa:fcwu-tw/ppa \
-    && apt-get update \
     && apt-get install -y --no-install-recommends --allow-unauthenticated \
         supervisor \
         openssh-server pwgen sudo vim-tiny \
@@ -17,79 +13,43 @@ RUN apt-get update \
         gtk2-engines-murrine ttf-ubuntu-font-family \
         firefox \
         nginx \
-        python-pip python-dev build-essential \
+	# python-pip python-dev
+	build-essential \
         mesa-utils libgl1-mesa-dri \
         gnome-themes-standard gtk2-engines-pixbuf gtk2-engines-murrine pinta arc-theme \
         dbus-x11 x11-utils \
-        terminator \
+	terminator \
+	gedit \
+	emacs \
     && apt-get autoclean \
     && apt-get autoremove \
     && rm -rf /var/lib/apt/lists/*
 
 # =================================
-# install ros (source: https://github.com/osrf/docker_images/blob/5399f380af0a7735405a4b6a07c6c40b867563bd/ros/kinetic/ubuntu/xenial/ros-core/Dockerfile)
-# install packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    dirmngr \
-    gnupg2 \
-    && rm -rf /var/lib/apt/lists/*
 
-# setup keys
-RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-
-# setup sources.list
-RUN echo "deb http://packages.ros.org/ros/ubuntu xenial main" > /etc/apt/sources.list.d/ros-latest.list
-
-# install bootstrap tools
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    python-rosdep \
-    python-rosinstall \
-    python-vcstools \
-    && rm -rf /var/lib/apt/lists/*
-
-# setup environment
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
-
-# bootstrap rosdep
-RUN rosdep init \
-    && rosdep update
-
-# install ros packages
-ENV ROS_DISTRO kinetic
-RUN apt-get update && apt-get install -y \
-#    ros-kinetic-ros-core=1.3.1-0* \
-	ros-kinetic-desktop-full \
-	ros-kinetic-moveit\
-	python-catkin-tools\
-    #              A
-    #              +--- full desktop \
-    && rm -rf /var/lib/apt/lists/*
-
-# setup entrypoint
-# COPY ./ros_entrypoint.sh /
-
+ENV ROS_PYTHON_VERSION 3
 
 # =================================
-
-# user tools
-RUN apt-get update && apt-get install -y \
-    terminator \
-    gedit \
-    okular \
-    vim \
-    && rm -rf /var/lib/apt/lists/*
 
 # tini for subreap
 ENV TINI_VERSION v0.9.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /bin/tini
 RUN chmod +x /bin/tini
 
+# temporary just python2 for the web (fix later)
+RUN apt-get update && apt-get install -y python-dev python2 && \
+	curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py && \
+	python2 get-pip.py && \
+	rm -rf /var/lib/apt/lists/*
+
 ADD image /
-RUN pip install setuptools wheel && pip install -r /usr/lib/web/requirements.txt
+RUN pip2 install setuptools wheel && pip2 install -r /usr/lib/web/requirements.txt
+RUN rm -rf /usr/local/bin/pip
 
 RUN cp /usr/share/applications/terminator.desktop /root/Desktop
-RUN echo "source /opt/ros/kinetic/setup.bash" >> /root/.bashrc
+RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 EXPOSE 80
 WORKDIR /root
