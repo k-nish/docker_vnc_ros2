@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=RViz
 Comment=RViz
-Exec=bash -c "source /opt/ros/kinetic/setup.bash&& rosrun rviz rviz"
-Icon=/opt/ros/kinetic/share/rqt_gui/resource/rqt.png
+Exec=bash -c "source /opt/ros/$ROS_DISTRO/setup.bash&& rviz2"
+Icon=/opt/ros/$ROS_DISTRO/share/rqt_gui/resource/rqt.png
 Type=Application
 Categories=GNOME;GTK;Utility;TerminalEmulator;System;
 StartupNotify=true
