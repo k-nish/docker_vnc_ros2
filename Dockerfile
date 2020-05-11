@@ -31,6 +31,21 @@ ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV ROS_PYTHON_VERSION 3
 
+RUN apt-get update && apt-get install -y \
+	libboost-all-dev \
+	libeigen-stl-containers-dev \
+	libqhull-dev \
+	librosconsole-bridge-dev \
+	cmake \
+	doxygen \
+	&& pip3 install ipython \
+	&& rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/OctoMap/octomap.git /tmp/octomap && \
+	cd /tmp/octomap && \
+	mkdir build && cd build && cmake .. && make -j4 && make install
+RUN rm -rf /tmp/octomap
+
 # =================================
 
 # tini for subreap
@@ -53,6 +68,10 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 EXPOSE 80
 WORKDIR /root
-ENV HOME=/home/ubuntu \
-    SHELL=/bin/bash
+ENV HOME /home
+ENV SHELL /bin/bash
+ENV COLCON_HOME $HOME/.colcon
+
+RUN rm -rf /usr/bin/python && ln -s /usr/bin/python3.8 /usr/bin/python
+
 ENTRYPOINT ["/startup.sh"]
