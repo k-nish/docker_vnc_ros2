@@ -46,6 +46,10 @@ RUN git clone https://github.com/OctoMap/octomap.git /tmp/octomap && \
 	mkdir build && cd build && cmake .. && make -j4 && make install
 RUN rm -rf /tmp/octomap
 
+RUN git clone https://github.com/ompl/ompl.git /ompl
+RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j2
+RUN cd /ompl/build && make install -j${nproc} 
+
 # =================================
 
 # tini for subreap
@@ -71,7 +75,5 @@ WORKDIR /root
 ENV HOME /home
 ENV SHELL /bin/bash
 ENV COLCON_HOME $HOME/.colcon
-
-RUN rm -rf /usr/bin/python && ln -s /usr/bin/python3.8 /usr/bin/python
 
 ENTRYPOINT ["/startup.sh"]
