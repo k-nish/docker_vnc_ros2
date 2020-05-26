@@ -77,3 +77,9 @@ ENV SHELL /bin/bash
 ENV COLCON_HOME $HOME/.colcon
 
 ENTRYPOINT ["/startup.sh"]
+
+# ======== PCL
+# RUN git clone https://github.com/lz4/lz4.git && cd lz4 && make -j${nproc} && make install
+RUN apt-get update && apt-get install -y libflann1.9 libflann-dev
+RUN git clone https://github.com/PointCloudLibrary/pcl.git /pcl
+RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc}
