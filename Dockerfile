@@ -71,7 +71,7 @@ RUN cp /usr/share/applications/terminator.desktop /root/Desktop
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 EXPOSE 80
-WORKDIR /root
+WORKDIR /home
 ENV HOME /home
 ENV SHELL /bin/bash
 ENV COLCON_HOME $HOME/.colcon
