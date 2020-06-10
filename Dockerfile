@@ -50,6 +50,9 @@ RUN git clone https://github.com/ompl/ompl.git /ompl
 RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j2
 RUN cd /ompl/build && make install -j${nproc} 
 
+# update ros
+RUN apt-get update && apt-get upgrade ros-foxy* \
+	&& rm -rf /var/lib/apt/lists/*
 # =================================
 
 # tini for subreap
@@ -82,4 +85,4 @@ ENTRYPOINT ["/startup.sh"]
 # RUN git clone https://github.com/lz4/lz4.git && cd lz4 && make -j${nproc} && make install
 RUN apt-get update && apt-get install -y libflann1.9 libflann-dev
 RUN git clone https://github.com/PointCloudLibrary/pcl.git /pcl
-RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc}
+RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc} && make install -j${nproc}
