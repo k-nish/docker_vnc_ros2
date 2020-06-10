@@ -47,12 +47,19 @@ RUN git clone https://github.com/OctoMap/octomap.git /tmp/octomap && \
 RUN rm -rf /tmp/octomap
 
 RUN git clone https://github.com/ompl/ompl.git /ompl
-RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j2
+RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j${nproc}
 RUN cd /ompl/build && make install -j${nproc} 
 
+RUN git clone https://github.com/flexible-collision-library/fcl.git /fcl
+RUN mkdir -p /fcl/build && cd /fcl/build && cmake .. && make -j${nproc}
+RUN cd /fcl/build && make install -j${nproc}
+RUN rm /ompl /fcl
+
+# =================================
 # update ros
 RUN apt-get update && apt-get upgrade ros-foxy* \
 	&& rm -rf /var/lib/apt/lists/*
+
 # =================================
 
 # tini for subreap
