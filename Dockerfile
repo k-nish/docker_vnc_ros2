@@ -47,8 +47,18 @@ RUN git clone https://github.com/OctoMap/octomap.git /tmp/octomap && \
 RUN rm -rf /tmp/octomap
 
 RUN git clone https://github.com/ompl/ompl.git /ompl
-RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j2
+RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j${nproc}
 RUN cd /ompl/build && make install -j${nproc} 
+
+RUN git clone https://github.com/flexible-collision-library/fcl.git /fcl
+RUN mkdir -p /fcl/build && cd /fcl/build && cmake .. && make -j${nproc}
+RUN cd /fcl/build && make install -j${nproc}
+RUN rm /ompl /fcl
+
+# =================================
+# update ros
+RUN apt-get update && apt-get upgrade ros-foxy* \
+	&& rm -rf /var/lib/apt/lists/*
 
 # =================================
 
@@ -71,9 +81,15 @@ RUN cp /usr/share/applications/terminator.desktop /root/Desktop
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> /root/.bashrc
 
 EXPOSE 80
-WORKDIR /root
+WORKDIR /home
 ENV HOME /home
 ENV SHELL /bin/bash
 ENV COLCON_HOME $HOME/.colcon
 
 ENTRYPOINT ["/startup.sh"]
+
+# ======== PCL
+# RUN git clone https://github.com/lz4/lz4.git && cd lz4 && make -j${nproc} && make install
+RUN apt-get update && apt-get install -y libflann1.9 libflann-dev
+RUN git clone https://github.com/PointCloudLibrary/pcl.git /pcl
+RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc} && make install -j${nproc}
