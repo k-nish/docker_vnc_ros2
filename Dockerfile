@@ -1,7 +1,12 @@
 # FROM ubuntu:18.04
 FROM osrf/ros2:nightly
 
+MAINTAINER krishneel@krishneel
+
 ENV DEBIAN_FRONTEND noninteractive
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV ROS_PYTHON_VERSION 3
 
 # built-in packages
 RUN apt-get update \
@@ -13,7 +18,6 @@ RUN apt-get update \
         gtk2-engines-murrine ttf-ubuntu-font-family \
         firefox \
         nginx \
-	# python-pip python-dev
 	build-essential \
         mesa-utils libgl1-mesa-dri \
         gnome-themes-standard gtk2-engines-pixbuf gtk2-engines-murrine pinta arc-theme \
@@ -27,38 +31,35 @@ RUN apt-get update \
 
 # =================================
 
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
-ENV ROS_PYTHON_VERSION 3
-
 RUN apt-get update && apt-get install -y \
 	libboost-all-dev \
 	libeigen-stl-containers-dev \
 	libqhull-dev \
 	librosconsole-bridge-dev \
+	libccd-dev \
+	python3-pykdl\
 	cmake \
 	doxygen \
-	&& pip3 install ipython \
+	&& pip3 install ipython cython \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN git clone https://github.com/OctoMap/octomap.git /tmp/octomap && \
-	cd /tmp/octomap && \
-	mkdir build && cd build && cmake .. && make -j4 && make install
-RUN rm -rf /tmp/octomap
+RUN wget https://github.com/OctoMap/octomap/archive/v1.8.1.tar.gz \
+	&& tar -xzvf v1.8.1.tar.gz \
+	&& cd octomap-1.8.1 && mkdir build && cd build \
+	&& cmake .. && make -j${nproc} && make install
 
 RUN git clone https://github.com/ompl/ompl.git /ompl
 RUN mkdir -p /ompl/build && cd /ompl/build && cmake .. && make -j${nproc}
-RUN cd /ompl/build && make install -j${nproc} 
+RUN cd /ompl/build && make install -j${nproc} && make clean
 
 RUN git clone https://github.com/flexible-collision-library/fcl.git /fcl
 RUN mkdir -p /fcl/build && cd /fcl/build && cmake .. && make -j${nproc}
 RUN cd /fcl/build && make install -j${nproc}
-RUN rm /ompl /fcl
 
-# =================================
-# update ros
-RUN apt-get update && apt-get upgrade ros-foxy* \
-	&& rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libflann1.9 libflann-dev
+RUN git clone https://github.com/PointCloudLibrary/pcl.git /pcl
+RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc} \
+	&& make install -j${nproc} && make clean && rm -rf *
 
 # =================================
 
@@ -87,9 +88,3 @@ ENV SHELL /bin/bash
 ENV COLCON_HOME $HOME/.colcon
 
 ENTRYPOINT ["/startup.sh"]
-
-# ======== PCL
-# RUN git clone https://github.com/lz4/lz4.git && cd lz4 && make -j${nproc} && make install
-RUN apt-get update && apt-get install -y libflann1.9 libflann-dev
-RUN git clone https://github.com/PointCloudLibrary/pcl.git /pcl
-RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc} && make install -j${nproc}
