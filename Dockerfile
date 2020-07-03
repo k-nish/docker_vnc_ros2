@@ -63,6 +63,17 @@ RUN cd /pcl && mkdir build && cd build && cmake .. && make -j${nproc} \
 
 # =================================
 
+RUN echo "deb http://packages.ros.org/ros/ubuntu focal main" | sudo tee /etc/apt/sources.list.d/ros-focal.list && \
+	apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 && \
+	apt-get update && apt-get install ros-noetic-ros-base -y && \
+	rm -rf /var/lib/apt/lists/*
+
+# RUN apt-get update && \
+# 	apt-get install ros-foxy-diagnostic-msgs -y &&  \
+# 	rm -rf /var/lib/apt/lists/*
+
+# =================================
+
 # tini for subreap
 ENV TINI_VERSION v0.9.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /bin/tini
