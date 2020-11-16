@@ -131,8 +131,6 @@ RUN cd /fcl/build && make install -j${nproc}
 ################################################################################
 
 RUN echo "source /opt/ros/foxy/setup.bash" >> /root/.bashrc
-# RUN echo "source /home/ubuntu/ocr_ws/devel/setup.bash" >> /root/.bashrc
-RUN echo "/home/rachel_chan/ros2/foxy/faro/devel/setup.bash" >> /root/.bashrc
 
 RUN apt-get update && apt-get install -y \
     ros-foxy-cv-bridge \
