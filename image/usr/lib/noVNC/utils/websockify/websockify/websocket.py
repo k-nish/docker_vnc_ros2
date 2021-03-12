@@ -22,6 +22,7 @@ import ssl
 import struct
 from base64 import b64encode
 from hashlib import sha1
+from urllib.parse import urlparse
 
 try:
     import numpy
@@ -30,23 +31,10 @@ except ImportError:
     warnings.warn("no 'numpy' module, HyBi protocol will be slower")
     numpy = None
 
-# python 3.0 differences
-try:    from urllib.parse import urlparse
-except: from urlparse import urlparse
-
-# SSLWant*Error is 2.7.9+
-try:
-    class WebSocketWantReadError(ssl.SSLWantReadError):
-        pass
-    class WebSocketWantWriteError(ssl.SSLWantWriteError):
-        pass
-except:
-    class WebSocketWantReadError(OSError):
-        def __init__(self):
-            OSError.__init__(self, errno.EWOULDBLOCK)
-    class WebSocketWantWriteError(OSError):
-        def __init__(self):
-            OSError.__init__(self, errno.EWOULDBLOCK)
+class WebSocketWantReadError(ssl.SSLWantReadError):
+    pass
+class WebSocketWantWriteError(ssl.SSLWantWriteError):
+    pass
 
 class WebSocket(object):
     """WebSocket protocol socket like class.
@@ -85,11 +73,13 @@ class WebSocket(object):
 
         self._state = "new"
 
-        self._partial_msg = ''.encode("ascii")
+        self._partial_msg = b''
 
-        self._recv_buffer = ''.encode("ascii")
+        self._recv_buffer = b''
         self._recv_queue = []
-        self._send_buffer = ''.encode("ascii")
+        self._send_buffer = b''
+
+        self._previous_sendmsg = None
 
         self._sent_close = False
         self._received_close = False
@@ -162,9 +152,7 @@ class WebSocket(object):
             self._key = ''
             for i in range(16):
                 self._key += chr(random.randrange(256))
-            if sys.hexversion >= 0x3000000:
-                self._key = bytes(self._key, "latin-1")
-            self._key = b64encode(self._key).decode("ascii")
+            self._key = b64encode(self._key.encode("latin-1")).decode("ascii")
 
             path = uri.path
             if not path:
@@ -194,10 +182,10 @@ class WebSocket(object):
             if not self._recv():
                 raise Exception("Socket closed unexpectedly")
 
-            if self._recv_buffer.find('\r\n\r\n'.encode("ascii")) == -1:
+            if self._recv_buffer.find(b'\r\n\r\n') == -1:
                 raise WebSocketWantReadError
 
-            (request, self._recv_buffer) = self._recv_buffer.split('\r\n'.encode("ascii"), 1)
+            (request, self._recv_buffer) = self._recv_buffer.split(b'\r\n', 1)
             request = request.decode("latin-1")
 
             words = request.split()
@@ -206,7 +194,7 @@ class WebSocket(object):
             if words[1] != "101":
                 raise Exception("WebSocket request denied: %s" % " ".join(words[1:]))
 
-            (headers, self._recv_buffer) = self._recv_buffer.split('\r\n\r\n'.encode("ascii"), 1)
+            (headers, self._recv_buffer) = self._recv_buffer.split(b'\r\n\r\n', 1)
             headers = headers.decode('latin-1') + '\r\n'
             headers = email.message_from_string(headers)
 
@@ -252,8 +240,8 @@ class WebSocket(object):
         the value "websocket" in such cases.
 
         WebSocketWantWriteError can be raised if the response cannot be
-        sent right away. Repeated calls to accept() does not need to
-        retain the arguments.
+        sent right away. accept() must be called again once more space
+        is available using the same arguments.
         """
 
         # This is a state machine in order to handle
@@ -342,10 +330,11 @@ class WebSocket(object):
     def recv(self):
         """Read data from the WebSocket.
 
-        This will return any available data on the socket. If the
-        socket is closed then an empty buffer will be returned. The
-        reason for the close is found in the 'close_code' and
-        'close_reason' properties.
+        This will return any available data on the socket (which may
+        be the empty string if the peer sent an empty message or
+        messages). If the socket is closed then None will be
+        returned. The reason for the close is found in the
+        'close_code' and 'close_reason' properties.
 
         Unlike recvmsg() this method may return data from more than one
         WebSocket message. It is however not guaranteed to return all
@@ -360,10 +349,11 @@ class WebSocket(object):
     def recvmsg(self):
         """Read a single message from the WebSocket.
 
-        This will return a single WebSocket message from the socket.
-        If the socket is closed then an empty buffer will be returned.
-        The reason for the close is found in the 'close_code' and
-        'close_reason' properties.
+        This will return a single WebSocket message from the socket
+        (which will be the empty string if the peer sent an empty
+        message). If the socket is closed then None will be
+        returned. The reason for the close is found in the
+        'close_code' and 'close_reason' properties.
 
         Unlike recv() this method will not return data from more than
         one WebSocket message. Callers should continue calling
@@ -375,30 +365,22 @@ class WebSocket(object):
         # May have been called to flush out a close
         if self._received_close:
             self._flush()
-            return ''.encode("ascii")
+            return None
 
         # Anything already queued?
         if self.pending():
-            msg = self._recvmsg()
-            if msg is not None:
-                return msg
-
-            # Note: We cannot proceed to self._recv() here as we may
+            return self._recvmsg()
+            # Note: If self._recvmsg() raised WebSocketWantReadError,
+            #       we cannot proceed to self._recv() here as we may
             #       have already called it once as part of the caller's
             #       "while websock.pending():" loop
-            raise WebSocketWantReadError
 
         # Nope, let's try to read a bit
         if not self._recv_frames():
-            return ''.encode("ascii")
+            return None
 
         # Anything queued now?
-        msg = self._recvmsg()
-        if msg is not None:
-            return msg
-
-        # Still nope
-        raise WebSocketWantReadError
+        return self._recvmsg()
 
     def pending(self):
         """Check if any WebSocket data is pending.
@@ -423,8 +405,12 @@ class WebSocket(object):
         data from other calls, or split it over multiple messages.
 
         WebSocketWantWriteError can be raised if there is insufficient
-        space in the underlying socket.
+        space in the underlying socket. send() must be called again
+        once more space is available using the same arguments.
         """
+        if len(bytes) == 0:
+            return 0
+
         return self.sendmsg(bytes)
 
     def sendmsg(self, msg):
@@ -435,23 +421,81 @@ class WebSocket(object):
         single WebSocket message.
 
         WebSocketWantWriteError can be raised if there is insufficient
-        space in the underlying socket.
+        space in the underlying socket. sendmsg() must be called again
+        once more space is available using the same arguments.
         """
-        if not self._sent_close:
-            # Only called to flush?
-            if msg:
-                self._sendmsg(0x2, msg)
+        if not isinstance(msg, bytes):
+            raise TypeError
 
-        self._flush()
+        if self._sent_close:
+            return 0
+
+        if self._previous_sendmsg is not None:
+            if self._previous_sendmsg != msg:
+                raise ValueError
+
+            self._flush()
+            self._previous_sendmsg = None
+
+            return len(msg)
+
+        try:
+            self._sendmsg(0x2, msg)
+        except WebSocketWantWriteError:
+            self._previous_sendmsg = msg
+            raise
+
         return len(msg)
 
-    def ping(self, data=None):
-        """Write a ping message to the WebSocket."""
-        self._sendmg(0x9, data)
+    def ping(self, data=b''):
+        """Write a ping message to the WebSocket
 
-    def pong(self, data=None):
-        """Write a pong message to the WebSocket."""
-        self._sendmg(0xA, data)
+        WebSocketWantWriteError can be raised if there is insufficient
+        space in the underlying socket. ping() must be called again once
+        more space is available using the same arguments.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError
+
+        if self._previous_sendmsg is not None:
+            if self._previous_sendmsg != data:
+                raise ValueError
+
+            self._flush()
+            self._previous_sendmsg = None
+
+            return
+
+        try:
+            self._sendmsg(0x9, data)
+        except WebSocketWantWriteError:
+            self._previous_sendmsg = data
+            raise
+
+    def pong(self, data=b''):
+        """Write a pong message to the WebSocket
+
+        WebSocketWantWriteError can be raised if there is insufficient
+        space in the underlying socket. pong() must be called again once
+        more space is available using the same arguments.
+        """
+        if not isinstance(data, bytes):
+            raise TypeError
+
+        if self._previous_sendmsg is not None:
+            if self._previous_sendmsg != data:
+                raise ValueError
+
+            self._flush()
+            self._previous_sendmsg = None
+
+            return
+
+        try:
+            self._sendmsg(0xA, data)
+        except WebSocketWantWriteError:
+            self._previous_sendmsg = data
+            raise
 
     def shutdown(self, how, code=1000, reason=None):
         """Gracefully terminate the WebSocket connection.
@@ -463,7 +507,9 @@ class WebSocket(object):
         ignored.
 
         WebSocketWantWriteError can be raised if there is insufficient
-        space in the underlying socket for the close message.
+        space in the underlying socket for the close message. shutdown()
+        must be called again once more space is available using the same
+        arguments.
 
         The how argument is currently ignored.
         """
@@ -480,7 +526,7 @@ class WebSocket(object):
 
         self._sent_close = True
 
-        msg = ''.encode('ascii')
+        msg = b''
         if code is not None:
             msg += struct.pack(">H", code)
             if reason is not None:
@@ -495,7 +541,9 @@ class WebSocket(object):
         a close message to the peer.
 
         WebSocketWantWriteError can be raised if there is insufficient
-        space in the underlying socket for the close message.
+        space in the underlying socket for the close message. close()
+        must be called again once more space is available using the same
+        arguments.
         """
         self.shutdown(socket.SHUT_RDWR, code, reason)
         self._close()
@@ -507,16 +555,9 @@ class WebSocket(object):
         while True:
             try:
                 data = self.socket.recv(4096)
-            except (socket.error, OSError):
-                exc = sys.exc_info()[1]
-                if hasattr(exc, 'errno'):
-                    err = exc.errno
-                else:
-                    err = exc[0]
-
-                if err == errno.EWOULDBLOCK:
+            except OSError as exc:
+                if exc.errno == errno.EWOULDBLOCK:
                     raise WebSocketWantReadError
-
                 raise
 
             if len(data) == 0:
@@ -573,8 +614,10 @@ class WebSocket(object):
 
                 if frame["fin"]:
                     msg = self._partial_msg
-                    self._partial_msg = ''.decode("ascii")
+                    self._partial_msg = b''
                     return msg
+            elif frame["opcode"] == 0x1:
+                self.shutdown(socket.SHUT_RDWR, 1003, "Unsupported: Text frames are not supported")
             elif frame["opcode"] == 0x2:
                 if self._partial_msg:
                     self.shutdown(socket.SHUT_RDWR, 1002, "Procotol error: Unexpected new frame")
@@ -592,7 +635,7 @@ class WebSocket(object):
 
                 if self._sent_close:
                     self._close()
-                    return ''.encode("ascii")
+                    return None
 
                 if not frame["fin"]:
                     self.shutdown(socket.SHUT_RDWR, 1003, "Unsupported: Fragmented close")
@@ -601,7 +644,7 @@ class WebSocket(object):
                 code = None
                 reason = None
                 if len(frame["payload"]) >= 2:
-                    code = struct.unpack(">H", frame["payload"][:2])
+                    code = struct.unpack(">H", frame["payload"][:2])[0]
                     if len(frame["payload"]) > 2:
                         reason = frame["payload"][2:]
                         try:
@@ -611,15 +654,15 @@ class WebSocket(object):
                             continue
 
                 if code is None:
-                    self.close_code = 1005
+                    self.close_code = code = 1005
                     self.close_reason = "No close status code specified by peer"
                 else:
                     self.close_code = code
                     if reason is not None:
                         self.close_reason = reason
 
-                self.shutdown(code, reason)
-                return ''.encode("ascii")
+                self.shutdown(None, code, reason)
+                return None
             elif frame["opcode"] == 0x9:
                 if not frame["fin"]:
                     self.shutdown(socket.SHUT_RDWR, 1003, "Unsupported: Fragmented ping")
@@ -635,7 +678,7 @@ class WebSocket(object):
             else:
                 self.shutdown(socket.SHUT_RDWR, 1003, "Unsupported: Unknown opcode 0x%02x" % frame["opcode"])
 
-        return None
+        raise WebSocketWantReadError
 
     def _flush(self):
         # Writes pending data to the socket
@@ -646,16 +689,9 @@ class WebSocket(object):
 
         try:
             sent = self.socket.send(self._send_buffer)
-        except (socket.error, OSError):
-            exc = sys.exc_info()[1]
-            if hasattr(exc, 'errno'):
-                err = exc.errno
-            else:
-                err = exc[0]
-
-            if err == errno.EWOULDBLOCK:
+        except OSError as exc:
+            if exc.errno == errno.EWOULDBLOCK:
                 raise WebSocketWantWriteError
-
             raise
 
         self._send_buffer = self._send_buffer[sent:]
@@ -681,11 +717,9 @@ class WebSocket(object):
     def _sendmsg(self, opcode, msg):
         # Sends a standard data message
         if self.client:
-            mask = ''
+            mask = b''
             for i in range(4):
-                mask += chr(random.randrange(256))
-            if sys.hexversion >= 0x3000000:
-                mask = bytes(mask, "latin-1")
+                mask += random.randrange(256)
             frame = self._encode_hybi(opcode, msg, mask)
         else:
             frame = self._encode_hybi(opcode, msg)
@@ -707,7 +741,7 @@ class WebSocket(object):
             plen = len(buf)
             pstart = 0
             pend = plen
-            b = c = ''.encode('ascii')
+            b = c = b''
             if plen >= 4:
                 dtype=numpy.dtype('<u4')
                 if sys.byteorder == 'big':
@@ -715,7 +749,7 @@ class WebSocket(object):
                 mask = numpy.frombuffer(mask, dtype, count=1)
                 data = numpy.frombuffer(buf, dtype, count=int(plen / 4))
                 #b = numpy.bitwise_xor(data, mask).data
-                b = numpy.bitwise_xor(data, mask).tostring()
+                b = numpy.bitwise_xor(data, mask).tobytes()
 
             if plen % 4:
                 dtype=numpy.dtype('B')
@@ -724,17 +758,15 @@ class WebSocket(object):
                 mask = numpy.frombuffer(mask, dtype, count=(plen % 4))
                 data = numpy.frombuffer(buf, dtype,
                         offset=plen - (plen % 4), count=(plen % 4))
-                c = numpy.bitwise_xor(data, mask).tostring()
+                c = numpy.bitwise_xor(data, mask).tobytes()
             return b + c
         else:
             # Slower fallback
-            if sys.hexversion < 0x3000000:
-                mask = [ ord(c) for c in mask ]
             data = array.array('B')
-            data.fromstring(buf)
+            data.frombytes(buf)
             for i in range(len(data)):
                 data[i] ^= mask[i % 4]
-            return data.tostring()
+            return data.tobytes()
 
     def _encode_hybi(self, opcode, buf, mask_key=None, fin=True):
         """ Encode a HyBi style WebSocket frame.
