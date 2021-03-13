@@ -1,7 +1,7 @@
 ## websockify: WebSockets support for any application/server
 
 websockify was formerly named wsproxy and was part of the
-[noVNC](https://github.com/kanaka/noVNC) project.
+[noVNC](https://github.com/novnc/noVNC) project.
 
 At the most basic level, websockify just translates WebSockets traffic
 to normal socket traffic. Websockify accepts the WebSockets handshake,
@@ -19,7 +19,7 @@ href="https://groups.google.com/forum/?fromgroups#!forum/novnc">noVNC/websockify
 discussion group</a>
 
 Bugs and feature requests can be submitted via [github
-issues](https://github.com/kanaka/websockify/issues).
+issues](https://github.com/novnc/websockify/issues).
 
 If you want to show appreciation for websockify you could donate to a great
 non-profits such as: [Compassion
@@ -55,31 +55,12 @@ understand it. You can do this by installing it as accepted certificate, or by
 using that same certificate for a HTTPS connection to which you navigate first
 and approve. Browsers generally don't give you the "trust certificate?" prompt
 by opening a WSS socket with invalid certificate, hence you need to have it
-acccept it by either of those two methods.
+accept it by either of those two methods.
 
-If you have a commercial/valid SSL certificate with one ore more intermediate
+If you have a commercial/valid SSL certificate with one or more intermediate
 certificates, concat them into one file, server certificate first, then the
 intermediate(s) from the CA, etc. Point to this file with the `--cert` option
 and then also to the key with `--key`. Finally, use `--ssl-only` as needed.
-
-
-### Websock Javascript library
-
-
-The `include/websock.js` Javascript library library provides a Websock
-object that is similar to the standard WebSocket object but Websock
-enables communication with raw TCP sockets (i.e. the binary stream)
-via websockify.
-
-Websock has built-in receive queue buffering; the message event
-does not contain actual data but is simply a notification that
-there is new data available. Several rQ* methods are available to
-read binary data off of the receive queue.
-
-The Websock API is documented on the [websock.js API wiki page](https://github.com/kanaka/websockify/wiki/websock.js)
-
-See the "Wrap a Program" section below for an example of using Websock
-and websockify as a browser telnet client (`wstelnet.html`).
 
 
 ### Additional websockify features
@@ -109,16 +90,31 @@ These are not necessary for the basic operation.
   This functionality is activated with the `--log-file FILE` option
   where FILE is the file where the logs should be saved.
 
-### Implementations of websockify
+* Authentication plugins: websockify can demand authentication for
+  websocket connections and, if you use `--web-auth`, also for normal
+  web requests. This functionality is activated with the
+  `--auth-plugin CLASS` and `--auth-source ARG` options, where CLASS is
+  usually one from auth_plugins.py and ARG is the plugin's configuration.
+
+* Token plugins: a single instance of websockify can connect clients to
+  multiple different pre-configured targets, depending on the token sent
+  by the client using the `token` URL parameter, or the hostname used to
+  reach websockify, if you use `--host-token`. This functionality is
+  activated with the `--token-plugin CLASS` and `--token-source ARG`
+  options, where CLASS is usually one from token_plugins.py and ARG is
+  the plugin's configuration.
+
+### Other implementations of websockify
 
 The primary implementation of websockify is in python. There are
-several alternate implementations in other languages (C, Node.js,
-Clojure, Ruby) in the `other/` subdirectory (with varying levels of
-functionality).
+several alternate implementations in other languages available in
+our sister repositories [websockify-js](https://github.com/novnc/websockify-js)
+(JavaScript/Node.js) and [websockify-other](https://github.com/novnc/websockify-other)
+ (C, Clojure, Ruby).
 
 In addition there are several other external projects that implement
 the websockify "protocol". See the alternate implementation [Feature
-Matrix](https://github.com/kanaka/websockify/wiki/Feature_Matrix) for
+Matrix](https://github.com/novnc/websockify/wiki/Feature_Matrix) for
 more information.
 
 
@@ -145,7 +141,7 @@ when the wrapped program exits or daemonizes.
 
 Here is an example of using websockify to wrap the vncserver command
 (which backgrounds itself) for use with
-[noVNC](https://github.com/kanaka/noVNC):
+[noVNC](https://github.com/novnc/noVNC):
 
     `./run 5901 --wrap-mode=ignore -- vncserver -geometry 1024x768 :1`
 
@@ -155,29 +151,20 @@ the command:
 
     `sudo ./run 2023 --wrap-mode=respawn -- telnetd -debug 2023`
 
-The `wstelnet.html` page demonstrates a simple WebSockets based telnet
-client (use 'localhost' and '2023' for the host and port
-respectively).
+The `wstelnet.html` page in the [websockify-js](https://github.com/novnc/websockify-js)
+project demonstrates a simple WebSockets based telnet client (use
+'localhost' and '2023' for the host and port respectively).
 
 
-### Building the Python ssl module (for python 2.5 and older)
+### Installing websockify
 
-* Install the build dependencies. On Ubuntu use this command:
+Download one of the releases or the latest development version, extract
+it and run `python3 setup.py install` as root in the directory where you
+extracted the files. Normally, this will also install numpy for better
+performance, if you don't have it installed already. However, numpy is
+optional. If you don't want to install numpy or if you can't compile it,
+you can edit setup.py and remove the `install_requires=['numpy'],` line
+before running `python3 setup.py install`.
 
-    `sudo aptitude install python-dev bluetooth-dev`
-
-* At the top level of the websockify repostory, download, build and
-  symlink the ssl module:
-
-    `wget --no-check-certificate http://pypi.python.org/packages/source/s/ssl/ssl-1.15.tar.gz`
-
-    `tar xvzf ssl-1.15.tar.gz`
-
-    `cd ssl-1.15`
-
-    `make`
-
-    `cd ../`
-
-    `ln -sf ssl-1.15/build/lib.linux-*/ssl ssl`
-
+Afterwards, websockify should be available in your path. Run
+`websockify --help` to confirm it's installed correctly.

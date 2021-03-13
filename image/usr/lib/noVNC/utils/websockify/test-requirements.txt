@@ -1,2 +1,6 @@
-mox3
+mock
 nose
+jwcrypto
+six
+redis
+simplejson
