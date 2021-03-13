@@ -3,8 +3,8 @@ name: build
 on:
   pull_request:
   push:
-    - master
-    - python3_cuda
+    branches:
+      - python3_cuda
 
 jobs:
   repos:
