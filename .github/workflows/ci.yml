@@ -36,5 +36,5 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
         push: true
