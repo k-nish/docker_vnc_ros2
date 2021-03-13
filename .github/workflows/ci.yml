@@ -6,6 +6,11 @@ on:
     branches:
       - python3_cuda
 
+env:
+  IMAGE_NAME: vnc-ros2-foxy
+  DOCKER_ORGANIZATION: krishneel
+  TAG: cuda
+
 jobs:
   repos:
     runs-on: ubuntu-20.04
@@ -25,3 +30,12 @@ jobs:
     #   with:
     #     username: ${{ secrets.DOCKERHUB_USERNAME }}
     #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile
+        tags: ${{ env.DOCKER_ORGANIZATION }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        # push: true
