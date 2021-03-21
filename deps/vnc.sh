@@ -41,3 +41,4 @@ apt-get install -y --no-install-recommends --allow-unauthenticated \
 	pinta \
 	vim \
 	vim-tiny \
+	tmux
