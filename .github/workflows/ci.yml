@@ -3,8 +3,6 @@ name: build
 on:
   pull_request:
   push:
-    branches:
-      - ci
 
 env:
   IMAGE_NAME: vnc-ros2-foxy
