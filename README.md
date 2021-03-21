@@ -16,7 +16,7 @@ docker run -it --rm -p 6080:80 krishneel/vnc-ros2-foxy
 
 Browse http://127.0.0.1:6080/
 
-![screenshot](https://github.com/iKrishneel/docker-ubuntu-vnc-desktop/blob/master/screenshots/ros2-foxy.png)
+![screenshot](https://github.com/iKrishneel/docker-ubuntu-vnc-desktop/blob/master/assets/ros2-foxy.png)
 
 
 Connect with VNC Viewer and protect by VNC Password
