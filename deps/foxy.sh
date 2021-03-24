@@ -35,4 +35,13 @@ sudo sh -c 'echo "deb [arch=$(dpkg --print-architecture)] http://packages.ros.or
 
 # install ros2 packages
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-desktop
+
+sudo apt-get install -y --no-install-recommends ros-${ROS_DISTRO}-desktop \
+     ros-${ROS_DISTRO}-cv-bridge \
+     ros-${ROS_DISTRO}-ament-*
+
+sudo pip3 install pytest --upgrade
+sudo apt-get install -y python3-colcon-common-extensions \
+     python3-vcstool
+
+echo "\033[33mInstalled ROS ${ROS_DISTRO} \033[0m"
