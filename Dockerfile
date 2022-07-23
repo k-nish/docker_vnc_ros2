@@ -1,6 +1,6 @@
-FROM nvidia/cuda:11.1-base-ubuntu20.04
+FROM nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
 
-MAINTAINER krishneel@krishneel
+MAINTAINER k-nish
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV LANG C.UTF-8
