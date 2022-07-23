@@ -36,5 +36,5 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        tags: ${{ env.DOCKER_ORAGANIZATION }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        tags: ${{ env.DOCKER_ORGANIZATION }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
         push: true
