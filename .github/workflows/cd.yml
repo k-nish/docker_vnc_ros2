@@ -7,6 +7,7 @@ on:
 env:
   IMAGE_NAME: vnc-ros2-foxy
   TAG: cuda
+  DOCKER_ORGANIZATION: ghcr.io/k-nish
 
 jobs:
   repos:
@@ -25,8 +26,9 @@ jobs:
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v1
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        registry: ghcr.io
+        username: k-nish
+        password: ${{ secrets.REGISTRY_TOKEN }}
 
     - name: Build and Push
       id: docker_build
@@ -34,5 +36,5 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
+        tags: ${{ env.DOCKER_ORGANIZATION }}/${{ env.IMAGE_NAME }}:${{ env.TAG }}
         push: true
