@@ -8,13 +8,13 @@ on:
       # min hour day month day-of-week
 
 env:
-  IMAGE_NAME: vnc-ros2-foxy
+  IMAGE_NAME: vnc-ros2-humble
   TAG: cuda
   DOCKER_ORGANIZATION: ghcr.io/k-nish
 
 jobs:
   repos:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout
