@@ -8,8 +8,8 @@ on:
       # min hour day month day-of-week
 
 env:
-  IMAGE_NAME: vnc-ros2-humble
-  TAG: cuda
+  IMAGE_NAME: vnc-ros2-cuda
+  TAG: humble
   DOCKER_ORGANIZATION: ghcr.io/k-nish
 
 jobs:
