@@ -23,7 +23,6 @@ apt-get install -y --no-install-recommends --allow-unauthenticated \
 	x11vnc \
 	xvfb \
 	gtk2-engines-murrine \
-	ttf-ubuntu-font-family \
         nginx \
 	build-essential \
         mesa-utils libgl1-mesa-dri \
