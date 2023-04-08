@@ -1,6 +1,6 @@
 #/usr/bin/env bash
 
-export ROS_DISTRO=foxy
+export ROS_DISTRO=humble
 export LANG=en_US.UTF-8
 export INSTALL_ROS_KEY=C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
