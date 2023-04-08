@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.3.0-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
 MAINTAINER k-nish
 
@@ -6,12 +6,12 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV ROS_PYTHON_VERSION 3
-ENV ROS_DISTRO foxy
+ENV ROS_DISTRO humble
 
 COPY deps /tmp/deps
 RUN chmod +x /tmp/deps/*
 RUN ./tmp/deps/vnc.sh && \
-	./tmp/deps/foxy.sh && \
+	./tmp/deps/humble.sh && \
 	rm -rf /var/lib/apt/lists/*
 
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
